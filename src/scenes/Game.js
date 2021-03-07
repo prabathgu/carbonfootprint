@@ -1,6 +1,7 @@
 import Phaser from '../lib/phaser.js'
 import {path, cards, icons, colors} from '../lib/consts.js'
 import {drawBubble, drawTextBubble} from '../lib/bubbles.js'
+import Bubble from '../lib/Bubble.js'
 
 const TRAVEL_STEPS = 50
 const TRAVEL_DELAY = 10
@@ -54,13 +55,17 @@ export default class Game extends Phaser.Scene {
         this.player = this.add.sprite(path[this.position][0], path[this.position][1],'player')
 
         const { width, height } = this.sys.game.canvas
+
+        // draw the die and the label
         const labelX = width - 300
         const labelY = height - 250
-        let bubble = drawTextBubble(this, labelX, labelY,
-                                    'Roll Die', 30, '#4585BF', 10, () => {
+        this.rollButton = new Bubble(this, labelX, labelY, 'Roll Die').setCallback(() => {
                                         this.rollDice()
                                     })
+
+        this.dice = this.add.sprite(labelX + 60, labelY - 75, 'dice', 4).setScale(1.5)
         
+        // setup die animation
         var animConfig = {
             key: 'diceAnimation',
             frames: this.anims.generateFrameNumbers('dice', { start: 0, end: 5, first: 0 }),
@@ -69,7 +74,6 @@ export default class Game extends Phaser.Scene {
         }
         this.anims.create(animConfig)
 
-        this.dice = this.add.sprite(labelX + 60, labelY - 75, 'dice', 4).setScale(1.5)
         //  Event handler for when the animation updates on our sprite
         this.dice.on(Phaser.Animations.Events.ANIMATION_UPDATE, function (anim, frame, sprite, frameKey) {
             this.dice.angle = this.dice.angle + 50
@@ -80,10 +84,29 @@ export default class Game extends Phaser.Scene {
             this.dice.angle = 0
             this.moveSteps(roll)
         }, this)
+
+        // draw the tally card and hide it
+        let scale = 1.5
+        let tallyCard = this.add.image(0, 0, 'tally_card').setOrigin(0,0).setScale(scale)
+
+        const tallyCardX = width / 2 - tallyCard.displayWidth / 2
+        const tallyCardY = height / 2 - tallyCard.displayHeight / 2
+        this.tallyContainer = this.add.container(tallyCardX, tallyCardY)
+        this.tallyContainer.add(tallyCard)
+
+        let border = this.add.rectangle(0, 0, tallyCard.displayWidth, tallyCard.displayHeight).setOrigin(0, 0)
+        border.setStrokeStyle(2, Phaser.Display.Color.ValueToColor(colors.black).color)
+        this.tallyContainer.add(border)
+
+        let closeButton = new Bubble(this, tallyCard.displayWidth - 170, tallyCard.displayHeight - 55, 'Close').setCallback(() => {
+                                        this.tallyContainer.setVisible(false)
+                                        this.rollButton.enable()
+                                    })                            
+        this.tallyContainer.add(closeButton)
+        this.tallyContainer.setVisible(false)
     }
 
     moveSteps(steps) {
-        console.log('Move steps')
         this.oldPosition = this.position
         this.position += steps
         if (this.position > path.length - 1) {
@@ -95,7 +118,6 @@ export default class Game extends Phaser.Scene {
     }
 
     onTravelStep() {
-        //console.log(this.travelSteps)
         const fromX = path[this.oldPosition][0]
         const fromY = path[this.oldPosition][1]
         const toX = path[this.position][0]
@@ -127,10 +149,6 @@ export default class Game extends Phaser.Scene {
             let displayCard = this.add.sprite(0, 0, this.card.sprite, deckIndex).setOrigin(0, 0).setScale(1)
             this.cardContainer.add(displayCard)
 
-            console.log('Landed Square')
-            console.log(this.card)
-            console.log(this.card.deck[deckIndex])
-
             if (this.card == cards.PURPLE) {
                 // Draw two boxes for purple cards
                 let topBorder = this.add.rectangle(0, 0, displayCard.width, displayCard.height / 2).setOrigin(0, 0)
@@ -159,9 +177,6 @@ export default class Game extends Phaser.Scene {
     }
 
     addTally(currentIcon, debug) {
-        console.log('Add Tally')
-        console.log(this)
-        console.log(currentIcon, debug)
         currentIcon.tally += 1
         this.showTallyCard(currentIcon)
         if (this.cardContainer) {
@@ -189,24 +204,6 @@ export default class Game extends Phaser.Scene {
 
         if (this.tallyContainer) {
             this.tallyContainer.setVisible(true)
-        } else {
-            const { width, height } = this.sys.game.canvas
-            let tallyCard = this.add.image(0, 0, 'tally_card').setOrigin(0,0).setScale(scale)
-
-            const tallyCardX = width / 2 - tallyCard.displayWidth / 2
-            const tallyCardY = height / 2 - tallyCard.displayHeight / 2
-            this.tallyContainer = this.add.container(tallyCardX, tallyCardY)
-            this.tallyContainer.add(tallyCard)
-
-            let border = this.add.rectangle(0, 0, tallyCard.displayWidth, tallyCard.displayHeight).setOrigin(0, 0)
-            border.setStrokeStyle(2, '#4585BF')
-            this.tallyContainer.add(border)
-
-            let bubble = drawTextBubble(this, tallyCard.displayWidth - 170, tallyCard.displayHeight - 65,
-                                        'Close', 30, colors.blue, 10, () => {
-                                            this.tallyContainer.setVisible(false)
-                                        })                            
-            this.tallyContainer.add(bubble)
         }
 
         for (const key in icons) {
@@ -228,11 +225,8 @@ export default class Game extends Phaser.Scene {
                 icon.text = this.add.text(x * scale, y * scale, str, textSettings).setOrigin(0.5, 0.3);
                 this.tallyContainer.add(icon.text)
             }
-            console.log('----')
-            console.log(currentIcon)
             if (icon.text) {
                 if (currentIcon && currentIcon.index == icon.index) {
-                    console.log('matched ', icon)
                     icon.text.setColor(colors.blue)
                 } else {
                     icon.text.setColor(colors.black)
@@ -242,7 +236,7 @@ export default class Game extends Phaser.Scene {
     }
 
     rollDice() {
-        console.log('Roll dice')
+        this.rollButton.disable()
         this.dice.play('diceAnimation')
     }
 }
