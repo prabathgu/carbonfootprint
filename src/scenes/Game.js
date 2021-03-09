@@ -17,6 +17,10 @@ export default class Game extends Phaser.Scene {
     cardContainer // Container for all card related display objects
     tallyContainer // Container for all Tally card related display objects
 
+    rollButton // Die roll button
+    showCardButton // Button to show tally or score cards
+    closeButton // Close tally card
+
     constructor() {
         super('game')
     }
@@ -26,10 +30,17 @@ export default class Game extends Phaser.Scene {
         this.travelling = false
         this.cardContainer = null
 
+        // initialize icon tallies
+        for (const key in icons) {
+            icons[key].tally = 0
+            icons[key].text = null
+        }
+
         // initialize the card stacks
         let stacks = [cards.GREEN, cards.PURPLE, cards.ORANGE, cards.GOVERNMENT]
         
         stacks.forEach(card => {
+            card.stack = []
             for (let i = 0; i < card.deck.length; i++) {
                 card.stack.push(i)
             }
@@ -59,11 +70,23 @@ export default class Game extends Phaser.Scene {
         // draw the die and the label
         const labelX = width - 300
         const labelY = height - 250
+        
         this.rollButton = new Bubble(this, labelX, labelY, 'Roll Die').setCallback(() => {
                                         this.rollDice()
                                     })
-
+        
         this.dice = this.add.sprite(labelX + 60, labelY - 75, 'dice', 4).setScale(1.5)
+
+        // Show tally card or score card button
+        this.showCardButton = new Bubble(this, labelX - 325, labelY, 'Show Tally Card').setCallback(() => {
+                                        if (this.position == path.length - 1) {
+                                            this.scene.start('score_card')
+                                        } else {
+                                            this.rollButton.disable()
+                                            this.showTallyCard()
+                                        }
+                                    })
+
         
         // setup die animation
         var animConfig = {
@@ -94,23 +117,26 @@ export default class Game extends Phaser.Scene {
         this.tallyContainer = this.add.container(tallyCardX, tallyCardY)
         this.tallyContainer.add(tallyCard)
 
-        let border = this.add.rectangle(0, 0, tallyCard.displayWidth, tallyCard.displayHeight).setOrigin(0, 0)
-        border.setStrokeStyle(2, Phaser.Display.Color.ValueToColor(colors.black).color)
-        this.tallyContainer.add(border)
+        this.border = this.add.rectangle(0, 0, tallyCard.displayWidth, tallyCard.displayHeight).setOrigin(0, 0)
+        this.border.setStrokeStyle(2, Phaser.Display.Color.ValueToColor(colors.black).color)
+        this.tallyContainer.add(this.border)
 
-        let closeButton = new Bubble(this, tallyCard.displayWidth - 170, tallyCard.displayHeight - 55, 'Close').setCallback(() => {
+        this.closeButton = new Bubble(this, tallyCard.displayWidth - 170, tallyCard.displayHeight - 55, 'Close').setCallback(() => {
                                         this.tallyContainer.setVisible(false)
                                         this.rollButton.enable()
+                                        this.showCardButton.enable()
                                     })                            
-        this.tallyContainer.add(closeButton)
+        this.tallyContainer.add(this.closeButton)
         this.tallyContainer.setVisible(false)
     }
 
     moveSteps(steps) {
         this.oldPosition = this.position
         this.position += steps
-        if (this.position > path.length - 1) {
+        if (this.position >= path.length - 1) {
             this.position = path.length - 1
+            this.showCardButton.setText('Show Score Card')
+            this.showCardButton.enable()
         }
 
         this.travelSteps = 0
@@ -136,7 +162,7 @@ export default class Game extends Phaser.Scene {
     landedSquare() {
         this.card = path[this.position][2]
         if (!this.card) {
-            console.log('We are at the beginning or end')
+            console.log('We are at the end')
         } else if (this.card == cards.AXE || this.card == cards.TREE || this.card == cards.CAR) {
             this.addTally(this.card.deck[0])
         } else {
@@ -159,8 +185,8 @@ export default class Game extends Phaser.Scene {
                 this.cardContainer.add(bottomBorder)
 
                 // Handle the two choices for purple cards
-                topBorder.setInteractive()
-                bottomBorder.setInteractive()
+                topBorder.setInteractive({ useHandCursor: true })
+                bottomBorder.setInteractive({ useHandCursor: true })
                 let addTallyBindTop = this.addTally.bind(this, this.card.deck[deckIndex][0], 'top')
                 let addTallyBindBottom = this.addTally.bind(this, this.card.deck[deckIndex][1], 'bottom')
                 topBorder.on('pointerdown', addTallyBindTop)
@@ -169,7 +195,7 @@ export default class Game extends Phaser.Scene {
                 let border = this.add.rectangle(0, 0, displayCard.width, displayCard.height).setOrigin(0, 0)
                 border.setStrokeStyle(4, this.card.color)
                 this.cardContainer.add(border)
-                border.setInteractive()
+                border.setInteractive({ useHandCursor: true })
                 let addTallyBind = this.addTally.bind(this, this.card.deck[deckIndex], 'normal')
                 border.on('pointerdown', addTallyBind)
             }
@@ -237,6 +263,7 @@ export default class Game extends Phaser.Scene {
 
     rollDice() {
         this.rollButton.disable()
+        this.showCardButton.disable()
         this.dice.play('diceAnimation')
     }
 }

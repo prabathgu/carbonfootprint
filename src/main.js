@@ -11,5 +11,5 @@ export default new Phaser.Game({
         height: 906
     },
     backgroundColor: '#ffffff',
-    scene: [Game]
+    scene: [Game, ScoreCard]
 })

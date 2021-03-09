@@ -82,4 +82,8 @@ export default class Bubble extends Phaser.GameObjects.Container {
         this.bubbleText.setColor(colors.gray)
         return this
     }
+
+    setText(str) {
+        this.bubbleText.setText(str)
+    }
 }
