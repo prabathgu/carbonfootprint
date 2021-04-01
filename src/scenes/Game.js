@@ -83,6 +83,7 @@ export default class Game extends Phaser.Scene {
                                         if (this.position == path.length - 1) {
                                             this.scene.start('score_card')
                                         } else {
+                                            this.tallyContainer.x = 411
                                             this.rollButton.disable()
                                             this.showTallyCard()
                                         }
