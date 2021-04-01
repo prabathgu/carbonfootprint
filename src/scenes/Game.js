@@ -1,7 +1,7 @@
 import Phaser from '../lib/phaser.js'
-import {path, cards, icons, colors} from '../lib/consts.js'
-import {drawBubble, drawTextBubble} from '../lib/bubbles.js'
+import {path, cards, icons, colors, frame} from '../lib/consts.js'
 import Bubble from '../lib/Bubble.js'
+import eventCenter from '../lib/EventCenter.js'
 
 const TRAVEL_STEPS = 50
 const TRAVEL_DELAY = 10
@@ -65,11 +65,12 @@ export default class Game extends Phaser.Scene {
         this.add.image(0, 0, 'board').setOrigin(0, 0)
         this.player = this.add.sprite(path[this.position][0], path[this.position][1],'player')
 
-        const { width, height } = this.sys.game.canvas
+        let { width, height } = this.sys.game.canvas
+        height -= frame.bottom_offset
 
         // draw the die and the label
         const labelX = width - 300
-        const labelY = height - 250
+        const labelY = height - 200
         
         this.rollButton = new Bubble(this, labelX, labelY, 'Roll Die').setCallback(() => {
                                         this.rollDice()
@@ -125,9 +126,14 @@ export default class Game extends Phaser.Scene {
                                         this.tallyContainer.setVisible(false)
                                         this.rollButton.enable()
                                         this.showCardButton.enable()
+                                        if (this.cardContainer) {
+                                            this.cardContainer.destroy()
+                                        }
                                     })                            
         this.tallyContainer.add(this.closeButton)
         this.tallyContainer.setVisible(false)
+
+        this.scene.launch('card_history')
     }
 
     moveSteps(steps) {
@@ -175,6 +181,15 @@ export default class Game extends Phaser.Scene {
             let displayCard = this.add.sprite(0, 0, this.card.sprite, deckIndex).setOrigin(0, 0).setScale(1)
             this.cardContainer.add(displayCard)
 
+            // Adjust the tally card position so that the card is visible
+            if (this.card == cards.ORANGE) {
+                this.tallyContainer.x = 100
+            } else if (this.card == cards.GREEN) {
+                this.tallyContainer.x = 415
+            } else {
+                this.tallyContainer.x = 715
+            }
+
             if (this.card == cards.PURPLE) {
                 // Draw two boxes for purple cards
                 let topBorder = this.add.rectangle(0, 0, displayCard.width, displayCard.height / 2).setOrigin(0, 0)
@@ -187,8 +202,8 @@ export default class Game extends Phaser.Scene {
                 // Handle the two choices for purple cards
                 topBorder.setInteractive({ useHandCursor: true })
                 bottomBorder.setInteractive({ useHandCursor: true })
-                let addTallyBindTop = this.addTally.bind(this, this.card.deck[deckIndex][0], 'top')
-                let addTallyBindBottom = this.addTally.bind(this, this.card.deck[deckIndex][1], 'bottom')
+                let addTallyBindTop = this.addTally.bind(this, this.card.deck[deckIndex][0], deckIndex, 'top')
+                let addTallyBindBottom = this.addTally.bind(this, this.card.deck[deckIndex][1], deckIndex, 'bottom')
                 topBorder.on('pointerdown', addTallyBindTop)
                 bottomBorder.on('pointerdown', addTallyBindBottom)
             } else {
@@ -196,18 +211,22 @@ export default class Game extends Phaser.Scene {
                 border.setStrokeStyle(4, this.card.color)
                 this.cardContainer.add(border)
                 border.setInteractive({ useHandCursor: true })
-                let addTallyBind = this.addTally.bind(this, this.card.deck[deckIndex], 'normal')
+                let addTallyBind = this.addTally.bind(this, this.card.deck[deckIndex], deckIndex, 'normal')
                 border.on('pointerdown', addTallyBind)
             }
         }
     }
 
-    addTally(currentIcon, debug) {
-        currentIcon.tally += 1
-        this.showTallyCard(currentIcon)
-        if (this.cardContainer) {
-            this.cardContainer.destroy()
+    addTally(currentIcon, deckIndex, choice) {
+        if (this.tallyContainer.visible) {
+            // Tally Container is visible, tally already counted. Skip.
+            return
         }
+        currentIcon.tally += 1
+        if (choice == 'top' || choice == 'bottom') {
+            eventCenter.emit('add-card', deckIndex, choice)
+        }
+        this.showTallyCard(currentIcon)
     }
 
     /* Randomize array in-place using Durstenfeld shuffle algorithm */

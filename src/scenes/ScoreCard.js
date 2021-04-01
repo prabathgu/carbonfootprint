@@ -1,6 +1,5 @@
 import Phaser from '../lib/phaser.js'
-import {cards, icons, colors} from '../lib/consts.js'
-import {drawTextBubble} from '../lib/bubbles.js'
+import {cards, icons, colors, frame} from '../lib/consts.js'
 import Bubble from '../lib/Bubble.js'
 
 export default class ScoreCard extends Phaser.Scene {
@@ -16,13 +15,15 @@ export default class ScoreCard extends Phaser.Scene {
     }
 
     create() {
-        const { width, height } = this.sys.game.canvas
-        let scoreCard = this.add.image(width/2, height/2, 'score_card')
+        let { width, height } = this.sys.game.canvas
+        height -= frame.bottom_offset
+
+        const scale = 0.95
+        let scoreCard = this.add.image(width/2, height/2, 'score_card').setScale(scale)
 
         let border = this.add.rectangle(width/2, height/2, scoreCard.displayWidth, scoreCard.displayHeight)
         border.setStrokeStyle(1, Phaser.Display.Color.ValueToColor(colors.black).color)
 
-        const scale = 1
         const xLeft = 225 // Center of the leftmost column of the Left 3 columns
         const xRight = 680 // Center of the leftmost column of the Right 3 columns
         const xStep = 90 // Gap between column centers

@@ -1,3 +1,7 @@
+const frame = {
+    bottom_offset: 250
+}
+
 const icons = {
     AIRPLANE : {
         index: 0,
@@ -205,7 +209,8 @@ const path = [
 const colors = {
     blue : '#4585BF',
     black : '#000000',
-    white : '#FFFFFF'
+    white : '#FFFFFF',
+    gray : '#AAAAAA'
 }
 
-export {path, cards, icons, colors}
+export {path, cards, icons, colors, frame}
